@@ -1,0 +1,275 @@
+openshift.withCluster() {
+  env.APP_NAME = '{{ app_code }}-{{ app_purpose }}'
+  env.PIPELINES_NAMESPACE = '{{ app_code }}-{{ app_purpose }}-ci'
+  env.DEV_NAMESPACE = '{{ app_code }}-{{ app_purpose }}-dev'
+  env.TEST_NAMESPACE = '{{ app_code }}-{{ app_purpose }}-test'
+  env.QA_NAMESPACE = '{{ app_code }}-{{ app_purpose }}-qa'
+  echo "Starting Pipeline for ${APP_NAME}..."
+}
+
+
+pipeline {
+
+    agent {
+        label "master"
+    }
+
+    environment {
+        GIT_SSL_NO_VERIFY = true
+        GIT_CREDENTIALS = credentials('{{ app_code }}-{{ app_purpose }}-ci-gitlab-secret')
+    }
+
+{% raw %}
+
+    stages {
+        
+        stage("Create OpenShift objects in DEV") {
+            agent {
+                node { 
+                    label "jenkins-slave-ansible"
+                }
+            }
+            steps {
+                echo 'Create OpenShift objects in DEV using openshift-applier...'
+
+                sh  '''
+                printenv
+                ansible-galaxy install -r .applier/requirements.yml --roles-path=.applier/roles
+                ansible-playbook -i .applier/inventory .applier/apply.yml -e filter_tags=dev -e skip_version_checks=true
+                '''
+            }
+        }
+      
+        stage('Build') {
+            agent {
+                node {
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Build application'
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${DEV_NAMESPACE}" ) {
+                            echo "Using project: ${openshift.project()}"
+                            openshift.startBuild("${APP_NAME}","--follow","--wait")
+                        }
+                    }
+                } 
+            }
+        }
+
+        stage('Deploy to DEV') {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Deploy application in DEV environment'
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${DEV_NAMESPACE}" ) {
+                            echo "Deploying to: ${openshift.project()}"
+                            def dc = openshift.selector('dc', "${APP_NAME}")
+                            dc.rollout().latest()
+                            dc.rollout().status()
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("Run tests in DEV"){
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Run tests in DEV...'
+
+                sh  '''
+                    echo "Dummy test passed succesfully!"
+                '''
+            } 
+        }
+
+        stage("Verify aplication in DEV") {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Verify Deployment in DEV'
+
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${DEV_NAMESPACE}" ) {
+                            echo "Deploying to: ${openshift.project()}"
+                            def dc = openshift.selector('dc', "${APP_NAME}")
+                            dc.rollout().latest()
+                            dc.rollout().status()
+                        }
+                    }
+                }
+            }
+        }
+
+     
+        stage("Promote to TEST") {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                    echo 'Promoting Container Image to Release'
+                    script {
+                        openshift.withProject( "${DEV_NAMESPACE}" ) {
+                            echo "Promoting to ${TEST_NAMESPACE}"
+                            openshift.tag("${APP_NAME}:dev", "${TEST_NAMESPACE}/${APP_NAME}:test")
+                        }
+                    }
+            }
+        }
+
+        stage("Create OpenShift objects in TEST") {
+            agent {
+                node { 
+                    label "jenkins-slave-ansible"
+                }
+            }
+            steps {
+                echo 'Create OpenShift objects in TEST using openshift-applier...'
+
+                sh  '''
+                ansible-galaxy install -r .applier/requirements.yml --roles-path=.applier/roles
+                ansible-playbook -i .applier/inventory .applier/apply.yml -e filter_tags=test -e skip_version_checks=true
+                '''
+            }
+        }
+
+        stage('Deploy to TEST') {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Deploy application in TEST'
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${TEST_NAMESPACE}" ) {
+                            echo "Deploying to: ${openshift.project()}"
+                            def dc = openshift.selector('dc', "${APP_NAME}")
+                            dc.rollout().latest()
+                            dc.rollout().status()
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage("Verify aplication in TEST") {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Verify Deployment in TEST'
+
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${TEST_NAMESPACE}" ) {
+                            echo "Deploying to: ${openshift.project()}"
+                            def dc = openshift.selector('dc', "${APP_NAME}")
+                            dc.rollout().latest()
+                            dc.rollout().status()
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("Promote to QA") {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                    echo 'Promoting Container Image to QA'
+                    script {
+                        openshift.withProject( "${TEST_NAMESPACE}" ) {
+                            echo "Promoting to ${QA_NAMESPACE}"
+                            openshift.tag("${APP_NAME}:test", "${QA_NAMESPACE}/${APP_NAME}:qa")
+                        }
+                    }
+            }
+        }
+
+        stage("Create OpenShift objects in QA") {
+            agent {
+                node { 
+                    label "jenkins-slave-ansible"
+                }
+            }
+            steps {
+                echo 'Create OpenShift objects in QA using openshift-applier...'
+
+                sh  '''
+                ansible-galaxy install -r .applier/requirements.yml --roles-path=.applier/roles
+                ansible-playbook -i .applier/inventory .applier/apply.yml -e filter_tags=qa -e skip_version_checks=true
+                '''
+            }
+        }
+
+        stage('Deploy to QA') {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Deploy application in QA'
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${QA_NAMESPACE}" ) {
+                            echo "Deploying to: ${openshift.project()}"
+                            def dc = openshift.selector('dc', "${APP_NAME}")
+                            dc.rollout().latest()
+                            dc.rollout().status()
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage("Verify aplication in QA") {
+            agent {
+                node { 
+                    label "master"
+                }
+            }
+            steps {
+                echo 'Verify Deployment in QA'
+
+                script{
+                    openshift.withCluster() {
+                        openshift.withProject( "${QA_NAMESPACE}" ) {
+                            echo "Deploying to: ${openshift.project()}"
+                            def dc = openshift.selector('dc', "${APP_NAME}")
+                            dc.rollout().latest()
+                            dc.rollout().status()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+ {% endraw %} 

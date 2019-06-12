@@ -1,0 +1,19 @@
+# GitLab user Token in order to speak to GitLab API
+gitlab_token:
+
+# GIT client configuration for the user to be run the git commands during the procress boostraping  
+git_user:
+  - email:
+  - name:
+
+# git_user:
+#   - email: mak@redhat.com
+#   - name: Marcos Entenza
+
+# GitLab base project ssh repository info to generate the final repository remote
+git_remote: 
+# git_remote: git@gitlab.com:dz-summit-2019
+
+app_code: #Provided by the user as an input variable from Tower Survey
+app_purpose: #Provided by the user as an input variable from Tower Survey
+dev_type: #Provided by the user as an input variable from Tower Survey

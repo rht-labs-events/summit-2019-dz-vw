@@ -1,0 +1,23 @@
+---
+
+- name: Retrive GitLab Hook information
+  shell: "oc get bc {{ app_code }}-{{ app_purpose }}-pipeline -n {{ app_code }}-{{ app_purpose }}-ci -o jsonpath='{.spec.triggers[1].gitlab.secret}'"
+  register: hook_secret
+
+#- debug: var=hook_secret
+
+- name: Create the url fact for the hook
+  set_fact: 
+    hook_url: "{{ api_url }}/apis/build.openshift.io/v1/namespaces/{{ app_code }}-{{ app_purpose }}-ci/buildconfigs/{{ app_code }}-{{ app_purpose }}-pipeline/webhooks/{{ hook_secret.stdout }}/gitlab"
+
+- name: Update GitLab repo with the hook
+  uri:
+    url: "{{ gitlab_api_url }}%2F{{ app_code }}-{{ app_purpose }}/hooks"
+    method: POST
+    body: '{"url": "{{ hook_url }}", "enable_ssl_verification": "false" }'
+    body_format: 'json'
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    status_code: 201

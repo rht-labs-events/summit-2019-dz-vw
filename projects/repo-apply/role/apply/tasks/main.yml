@@ -1,0 +1,11 @@
+---
+
+- name: Process repository dependencies
+  shell: "ansible-galaxy install -r requirements.yml -p roles"
+  args:
+    chdir: "/tmp/{{ app_code }}-{{ app_purpose }}/.applier" 
+
+- name: Apply ansible inventory to depploy objects in OpenShift
+  shell: "ansible-playbook -i .applier/inventory/ .applier/apply.yml -e skip_version_checks=true"
+  args:
+    chdir: "/tmp/{{ app_code }}-{{ app_purpose }}"

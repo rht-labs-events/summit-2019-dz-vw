@@ -1,0 +1,14 @@
+# GitLab user Token in order to speak to GitLab API
+gitlab_token:
+
+# OpenShift API URL
+api_url:
+#api_url: "https://api.events.dzvw.rht-labs.com:6443"
+
+# GitLab API URL for the project where to create the hook
+gitlab_api_url: 
+#gitlab_api_url: ""https://gitlab.com/api/v4/projects/dz-summit-2019" 
+
+app_code: #Provided by the user as an input variable from Tower Survey
+app_purpose: #Provided by the user as an input variable from Tower Survey
+dev_type: #Provided by the user as an input variable from Tower Survey

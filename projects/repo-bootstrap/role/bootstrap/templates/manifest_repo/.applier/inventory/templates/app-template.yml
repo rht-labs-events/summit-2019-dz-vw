@@ -1,0 +1,91 @@
+---
+kind: Template
+apiVersion: template.openshift.io/v1
+metadata:
+  name: container-manifest-app-template
+objects:
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: ${APP_NAME}
+  spec:
+    ports:
+    - name: web
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 0
+    selector:
+      name: ${APP_NAME}
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}
+- kind: Route
+  apiVersion: route.openshift.io/v1
+  metadata:
+    name: ${APP_NAME}
+    annotations:
+      template.openshift.io/expose-uri: http://{.spec.host}{.spec.path}
+  spec:
+    to:
+      kind: Service
+      name: ${APP_NAME}
+      weight: 100
+    port:
+      targetPort: web
+    wildcardPolicy: None
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      description: Defines how to deploy the application server
+      template.alpha.openshift.io/wait-for-ready: "true"
+    name: ${APP_NAME}
+  spec:
+    replicas: 1
+    selector:
+      name: ${APP_NAME}
+    strategy:
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          name: ${APP_NAME}
+        name: ${APP_NAME}
+      spec:
+        containers:
+        - image: ' '
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            timeoutSeconds: 3
+          name: ${APP_NAME}
+          ports:
+          - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 3
+            timeoutSeconds: 3
+    triggers:
+    - imageChangeParams:
+        automatic: false
+        containerNames:
+          - ${APP_NAME}
+        from:
+          kind: ImageStreamTag
+          name: '${APP_NAME}:${STAGE}'
+      type: ImageChange
+    - type: ConfigChange
+parameters:
+- name: APP_NAME
+  description: Application Name
+  required: true
+- name: STAGE
+  description: Will be used to tie the 'tag' to the particular project promotion level
+  required: true
+

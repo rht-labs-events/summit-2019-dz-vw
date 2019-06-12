@@ -1,0 +1,64 @@
+---
+
+- name: Set Git Global preferences
+  shell: "{{ item }}"
+  with_items:
+    - 'git config --global user.email "{{ git_user.email}}"'
+    - 'git config --global user.name "{{ git_user.name }}"'
+    - 'git config --global push.default simple'
+
+- name: Create target repository structure
+  file:
+    path: "/tmp/{{ app_code }}-{{ app_purpose }}"
+    state: directory
+    mode: 0755
+
+- name: Copy sample s2i repo to new location
+  synchronize:
+    src: "{{ role_path }}/templates/s2i_repo/"
+    dest: "/tmp/{{ app_code }}-{{ app_purpose }}"
+  when:
+    - dev_type == 'Source Code to Container Image'
+
+- name: Copy sample container manifest repo to new location
+  synchronize:
+    src: "{{ role_path }}/templates/manifest_repo/"
+    dest: "/tmp/{{ app_code }}-{{ app_purpose }}"
+  when:
+    - dev_type == 'Container Manifest source'
+
+- name: Copy sample raw templates repo to new location
+  synchronize:
+    src: "{{ role_path }}/templates/raw_repo/"
+    dest: "/tmp/{{ app_code }}-{{ app_purpose }}"
+  when:
+    - dev_type == 'OpenShift Raw Templates'
+
+- name: Process seed-hosts Jinja object with given parameters
+  template:
+    src: "/tmp/{{ app_code }}-{{ app_purpose }}/.applier/inventory/group_vars/seed-hosts.yml.j2"
+    dest: "/tmp/{{ app_code }}-{{ app_purpose }}/.applier/inventory/group_vars/seed-hosts.yml"
+
+- name: Process Jenkinsfile Jinja object with given parameters
+  template:
+    src: "/tmp/{{ app_code }}-{{ app_purpose }}/Jenkinsfile.j2"
+    dest: "/tmp/{{ app_code }}-{{ app_purpose }}/Jenkinsfile"
+
+- name: Ensure Jinja template objects are no longer present
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/tmp/{{ app_code }}-{{ app_purpose }}/.applier/inventory/group_vars/seed-hosts.yml.j2"
+    - "/tmp/{{ app_code }}-{{ app_purpose }}/Jenkinsfile.j2"
+
+- name: Init new repository and push
+  shell: "{{ item }}"
+  args:
+    chdir: "/tmp/{{ app_code }}-{{ app_purpose }}"
+  with_items:
+    - 'git init'
+    - 'git add .'
+    - 'git commit -m "Inital repository set up"'
+    - 'git remote add origin {{ git_remote }}/{{ app_code }}-{{ app_purpose }}.git'
+    - 'git push origin master'

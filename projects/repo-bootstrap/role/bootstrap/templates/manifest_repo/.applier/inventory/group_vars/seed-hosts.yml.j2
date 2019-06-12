@@ -1,0 +1,196 @@
+ansible_connection: local
+
+namespace_ci: 
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-ci'
+  NAMESPACE_DESCRIPTION: '{{ app_code}} CI Project'
+  NAMESPACE_DISPLAY_NAME: '{{ app_code}} CI Project'
+
+namespace_dev:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-dev'
+  NAMESPACE_DESCRIPTION: '{{ app_code}} DEV Project'
+  NAMESPACE_DISPLAY_NAME: '{{ app_code}} DEV Project'
+
+namespace_test:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-test'
+  NAMESPACE_DESCRIPTION: '{{ app_code}} TEST Project'
+  NAMESPACE_DISPLAY_NAME: '{{ app_code}} TEST Project'
+
+namespace_qa:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-qa'
+  NAMESPACE_DESCRIPTION: '{{ app_code}} QA Project'
+  NAMESPACE_DISPLAY_NAME: '{{ app_code}} QA Project'
+
+
+jenkins_ansible_slave:
+  SOURCE_REPOSITORY_URL: https://github.com/redhat-cop/containers-quickstarts.git
+  SOURCE_CONTEXT_DIR: jenkins-slaves/jenkins-slave-ansible
+  BUILDER_IMAGE_NAME: docker.io/openshift/jenkins-slave-base-centos7:v3.11
+  NAME: jenkins-slave-ansible
+  SOURCE_REPOSITORY_REF: v1.10
+  DOCKERFILE_PATH: Dockerfile
+  SLAVE_IMAGE_TAG: latest
+
+jenkins:
+  MEMORY_LIMIT: 2Gi
+  ENABLE_OAUTH: false
+
+gitlab_secret:
+  USERNAME: 'git'
+  PASSWORD: '{{ gitlab_token }}'
+  SECRET_NAME: 'gitlab-secret'
+
+pipeline_vars:
+  NAME: '{{ app_code }}-{{ app_purpose }}'
+  PIPELINE_SOURCE_REPOSITORY_URL: "https://gitlab.com/dz-summit-2019/{{ app_code }}-{{ app_purpose }}.git"
+  PIPELINE_SOURCE_REPOSITORY_REF: master
+  PIPELINE_SOURCE_SECRET: gitlab-secret
+
+jenkins_bind:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-ci'
+  SACCOUNT: jenkins
+  CLUSTER_ROLE: cluster-admin
+
+demouser_bind_ci:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-ci'
+  USER: demouser
+  ROLE: admin
+
+demouser_bind_dev:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-dev'
+  USER: demouser
+  ROLE: admin
+
+demouser_bind_test:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-test'
+  USER: demouser
+  ROLE: admin
+
+demouser_bind_qa:
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-qa'
+  USER: demouser
+  ROLE: admin
+
+
+manifest_build_app_dev:
+  APP_NAME: '{{ app_code }}-{{ app_purpose }}'
+  CONTEXT_DIR: "container_manifest/"
+  SOURCE_REPOSITORY_REF: master
+  SOURCE_REPOSITORY_URL: "https://gitlab.com/dz-summit-2019/{{ app_code }}-{{ app_purpose }}.git"
+  SOURCE_SECRET: gitlab-secret
+  NAMESPACE: '{{ app_code }}-{{ app_purpose }}-dev'
+
+manifest_app_dev:
+  APP_NAME: '{{ app_code }}-{{ app_purpose }}'
+  STAGE: dev
+
+manifest_app_test:
+  APP_NAME: '{{ app_code }}-{{ app_purpose }}'
+  STAGE: test
+
+manifest_app_qa:
+  APP_NAME: '{{ app_code }}-{{ app_purpose }}'
+  STAGE: qa
+  
+  
+{% raw %}
+openshift_cluster_content:
+- object: projects
+  content:
+  - name: CI Project
+    template: "{{ playbook_dir }}/inventory/templates/create-project.yml"
+    params_from_vars: "{{ namespace_ci }}"
+  - name: DEV Project
+    template: "{{ playbook_dir }}/inventory/templates/create-project.yml"
+    params_from_vars: "{{ namespace_dev }}"
+  - name: TEST Project
+    template: "{{ playbook_dir }}/inventory/templates/create-project.yml"
+    params_from_vars: "{{ namespace_test }}"
+  - name: QA Project
+    template: "{{ playbook_dir }}/inventory/templates/create-project.yml"
+    params_from_vars: "{{ namespace_qa }}"
+
+- object: ci-objects
+  content:
+  - name: jenkins-slave-ansible
+    template: "{{ playbook_dir }}/inventory/templates/jenkins-slave-generic-template.yml"
+    params_from_vars: "{{ jenkins_ansible_slave }}"
+    namespace: "{{ namespace_ci.NAMESPACE }}"
+  - name: jenkins-ephemeral
+    template: "{{ playbook_dir }}/inventory/templates/jenkins-ephemeral.yml"
+    params_from_vars: "{{ jenkins }}"
+    namespace: "{{ namespace_ci.NAMESPACE }}"
+  - name: gitlab-secret-ci
+    template: "{{ playbook_dir }}/inventory/templates/secret.yml"
+    params_from_vars: "{{ gitlab_secret }}"
+    namespace: "{{ namespace_ci.NAMESPACE }}"
+  - name: gitlab-secret-dev
+    template: "{{ playbook_dir }}/inventory/templates/secret.yml"
+    params_from_vars: "{{ gitlab_secret }}"
+    namespace: "{{ namespace_dev.NAMESPACE }}"
+  - name: Application Pipeline
+    template: "{{ playbook_dir }}/inventory/templates/pipeline.yml"
+    params_from_vars: "{{ pipeline_vars }}"
+    namespace: "{{ namespace_ci.NAMESPACE }}"
+  - name: demouser-role-binding
+    template: "{{ playbook_dir }}/inventory/templates/role-bind.yml"
+    params_from_vars: "{{ demouser_bind_ci }}"
+    namespace: "{{ namespace_ci.NAMESPACE }}"
+
+- object: global-objects
+  content:
+  - name: jenkins-role-binding
+    template: "{{ playbook_dir }}/inventory/templates/cluster-role-bind.yml"
+    params_from_vars: "{{ jenkins_bind }}"
+
+- object: dev-objects
+  content:
+  - name: manifest-based-app
+    template: "{{ playbook_dir }}/inventory/templates/build-app-template.yml"
+    params_from_vars: "{{ manifest_build_app_dev }}"
+    namespace: "{{ namespace_dev.NAMESPACE }}"
+    tags:
+    - dev
+  - name: manifest-based-app
+    template: "{{ playbook_dir }}/inventory/templates/app-template.yml"
+    params_from_vars: "{{ manifest_app_dev }}"
+    namespace: "{{ namespace_dev.NAMESPACE }}"
+    tags:
+    - dev
+  - name: demouser-role-binding
+    template: "{{ playbook_dir }}/inventory/templates/role-bind.yml"
+    params_from_vars: "{{ demouser_bind_dev }}"
+    namespace: "{{ namespace_dev.NAMESPACE }}"
+    tags:
+    - dev
+
+- object: test-objects
+  content:
+  - name: manifest-based-app
+    template: "{{ playbook_dir }}/inventory/templates/app-template.yml"
+    params_from_vars: "{{ manifest_app_test }}"
+    namespace: "{{ namespace_test.NAMESPACE }}"
+    tags:
+    - test
+  - name: demouser-role-binding
+    template: "{{ playbook_dir }}/inventory/templates/role-bind.yml"
+    params_from_vars: "{{ demouser_bind_test }}"
+    namespace: "{{ namespace_test.NAMESPACE }}"
+    tags:
+    - test
+
+- object: qa-objects
+  content:
+  - name: manifest-based-app
+    template: "{{ playbook_dir }}/inventory/templates/app-template.yml"
+    params_from_vars: "{{ manifest_app_qa }}"
+    namespace: "{{ namespace_qa.NAMESPACE }}"
+    tags:
+    - qa
+  - name: demouser-role-binding
+    template: "{{ playbook_dir }}/inventory/templates/role-bind.yml"
+    params_from_vars: "{{ demouser_bind_qa }}"
+    namespace: "{{ namespace_qa.NAMESPACE }}"
+    tags:
+    - qa
+   
+ {% endraw %} 

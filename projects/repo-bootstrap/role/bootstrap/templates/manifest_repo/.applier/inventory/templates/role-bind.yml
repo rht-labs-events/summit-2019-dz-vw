@@ -1,0 +1,32 @@
+---
+kind: Template
+apiVersion: template.openshift.io/v1
+metadata:
+  name: cluster-rolebinding
+objects:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: "${USER}-${NAMESPACE}"
+    namespace: "${NAMESPACE}"
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: "${ROLE}"
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: "${USER}"
+parameters:
+- name: NAMESPACE
+  displayName: Project/Namespace for Jenkins Pipelines
+  description: The project/namespace where the Jenkins executing pipelines is deployed.
+  required: true
+- name: USER
+  displayName: Service account to be added to the Cluster Role
+  description: Service account to be added to the Cluster Role
+  required: true
+- name: ROLE
+  displayName: Cluster Role to bind with
+  description: Cluster Role to bind with
+  required: true
