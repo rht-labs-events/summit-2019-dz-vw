@@ -10,4 +10,4 @@ This repository contains the source code used during Red Hat Summit 2019 Discove
 
 ## High Level Architecture
 
-![System Diagram][media/high_level_arch.png]
+![System Diagram](media/high_level_arch.png "System Diagram")
