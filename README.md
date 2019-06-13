@@ -8,3 +8,6 @@ This repository contains the source code used during Red Hat Summit 2019 Discove
 
 [Container Manifest e2e Demo](media/demo.webm)
 
+## High Level Architecture
+
+![System Diagram][media/high_level_arch.png]
