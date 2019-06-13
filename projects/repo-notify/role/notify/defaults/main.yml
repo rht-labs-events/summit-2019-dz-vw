@@ -1,0 +1,21 @@
+# GitLab user Token in order to speak to GitLab API
+gitlab_token:
+
+app_code: #Provided by the user as an input variable from Tower Survey
+app_purpose: #Provided by the user as an input variable from Tower Survey
+dev_type: #Provided by the user as an input variable from Tower Survey
+
+# Mail Server configuration for sending notifications
+mail_host: 
+mail_port: 
+mail_user: 
+mail_passwd: 
+mail_from:
+
+# GitLab Group URL for the project to be stored
+gitlab_group_url: 
+#gitlab_group_url: "https://gitlab.com/dz-summit-2019" 
+
+# OpenShift exposed Routes wildcard
+apps_url:
+#apps_url: "apps.events.dzvw.rht-labs.com"

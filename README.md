@@ -4,6 +4,10 @@ This repository contains the source code used during Red Hat Summit 2019 Discove
 
 [Presentation Slides](https://www.slideshare.net/makimak1/how-volkswagen-used-microservices-and-automation-to-develop-self-service-solutions)
 
+## Configuration and demo case
+
+
+
 ## Demo video
 
 [Container Manifest e2e Demo](media/demo.webm)

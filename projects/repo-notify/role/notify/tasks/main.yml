@@ -1,0 +1,16 @@
+---
+
+- name: Sending an email with all the information
+  mail:
+    host: "{{ mail_host }}"
+    port: "{{ mail_port }}" 
+    username: "{{ mail_user }}"
+    password: "{{ mail_passwd }}"
+    to:
+    - Dev Team XXXXX <devteam@demosummit.com> ## Hardcoded for the demo, user email should be captured from Tower as the logged user
+    from: "{{ mail_from }}"
+    secure: always
+    subtype: 'html'
+    subject: "Developer Workflow - New onboarding request information"
+    body: "{{ lookup('template', '{{ role_path }}/templates/email_template.j2') }}"
+
