@@ -6,7 +6,11 @@ This repository contains the source code used during Red Hat Summit 2019 Discove
 
 ## Configuration and demo case
 
+Ansible Tower will be configured with 4 Projects, corresponding to the projects under [projects](projects/) directory
 
+Ansible Tower will be configured with 4 Job Templates using the Playbook from each previous configured Project
+
+Ansible Tower will be configured with a Workflow Template using the previuos 4 Job Templates, this way the whole workflow will be executed on the user onboard.
 
 ## Demo video
 
