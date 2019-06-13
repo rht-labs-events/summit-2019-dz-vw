@@ -12,7 +12,7 @@ Ansible Tower will be configured with 4 Job Templates using the Playbook from ea
 
 Ansible Tower will be configured with a Workflow Template using the previuos 4 Job Templates, this way the whole workflow will be executed on the user onboard.
 
-The system will allow the user to select from 3 different approaches, for the simplicity of the demo, only (Container Manifest)[projects/repo-bootstrap/role/bootstrap/templates/manifest_repo] approach example has the complete required code.
+The system will allow the user to select from 3 different approaches, for the simplicity of the demo, only [Container Manifest](projects/repo-bootstrap/role/bootstrap/templates/manifest_repo) approach example has the complete required code.
 
 ## Demo video
 
